@@ -16,7 +16,7 @@ library(dataRetrieval)
 siteNumber <- "02171645"
 parameterCd <- c("00010","00060","00300")  # Temperature, discharge, and DO
 statCd <- c("00001","00002","00003")  # Maximum, Minimum, and Mean measurements
-startDate <- "2007-01-29"
+startDate <- "1999-01-29"
 endDate <- "2022-05-09"
 
 tempdisdo <- readNWISdv(siteNumber, parameterCd, 
@@ -108,6 +108,10 @@ subset<-Full.parameters[c(1,2,3,4,8,11,14,15,16)]
 # pulling a subset of data that may be of interest, and trying that..
 
 summary(subset)
+# subset$BLH_passed<-as.numeric(subset$BLH_passed, na.omit=TRUE)
+# subset$AMS_passed<-as.numeric(subset$AMS_passed, na.omit=TRUE)
+# FOR SOME REASON, passage numbers were reading as characters...
+
 # Great, all look numeric (NOW)
 
 ## NOW, from the DFP table, it looks like 2009-2011 were really decent passage years
@@ -118,6 +122,22 @@ summary(subset)
 # Decent for multi-year graphic, individual years for DO, TEMP, Discharge plotted               
 
 Decent<-filter(subset,subset$Date >= "2009-02-09" & subset$Date <= "2011-04-29")
+
+# Interestingly, there was no temp or DO measurements prior to 2007
+
+# I have mean discharge and passage counts for all years in this range,
+# but I can't plot in the same way as 2007-2022 (with temp...)
+
+ninetynine<-filter(subset, YEAR=="1999")
+twothousand<-filter(subset, YEAR=="2000")
+one<-filter(subset,YEAR=="2001")
+two<-filter(subset, YEAR=="2002")
+three<-filter(subset, YEAR=="2003")
+four<-filter(subset, YEAR=="2004")
+five<-filter(subset, YEAR=="2005")
+six<-filter(subset, YEAR=="2006")
+
+# NOW for all those with full abiotic measurements :
 
 seven<-filter(subset, YEAR=="2007")
 eight<-filter(subset, YEAR=="2008")
