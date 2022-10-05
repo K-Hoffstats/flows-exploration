@@ -66,7 +66,7 @@ write.csv(extracted.SRRC,"//dnrnas/Bonneau/Userdata/HoffmanKy/SCDNR/Fish.Lift/20
 Full.parameters <- read.csv("C:/Users/Kyle/Desktop/SCDNR/Fish.Lift/Full.parameters.csv")
 # AT HOME
 
-Full.parameters <- read.csv("//dnrnas/Bonneau/Userdata/HoffmanKy/SCDNR/Fish.Lift/2022/Full.parameters.csv")
+Full.parameters <- read.csv("//dnrnas/Bonneau/Userdata/HoffmanKy/SCDNR/Fish.Lift/2022/2022_flows.exploration/Full.parameters.csv")
 # OFFICE: read in the data
 
 Full.parameters <- read.csv("C:/Users/HoffmanKy/Desktop/Full.parameters.csv")
@@ -74,6 +74,33 @@ Full.parameters <- read.csv("C:/Users/HoffmanKy/Desktop/Full.parameters.csv")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ### NOW FOR GRAPHICS ###
+
+summary(Full.parameters)
+# several things here:
+# Date, herring, shad, and discharge mean are reading as characters...
+# Date is easy enough--simple conversion to date format (done numerous times)
+## The others pop off as characters because the commas are misreading in R,
+## AND I need to gsub out the commas to read appropriately OR R will omit these
+## records (all with commas) as NA's
+
+Full.parameters$BLH_passed<-gsub(",","",Full.parameters$BLH_passed)
+# fixed herring
+Full.parameters$AMS_passed<-gsub(",","",Full.parameters$AMS_passed)
+# fixed shad
+Full.parameters$Discharge_mean<-gsub(",","",Full.parameters$Discharge_mean)
+# fixed average discharge
+
+# NOW, to make these read as numeric instead of characters:
+
+Full.parameters$BLH_passed <- as.numeric(Full.parameters$BLH_passed)
+Full.parameters$AMS_passed <- as.numeric(Full.parameters$AMS_passed)
+Full.parameters$Discharge_mean <- as.numeric(Full.parameters$Discharge_mean)
+# Check (x3)
+
+summary(Full.parameters)
+# Looks much better--a few NA's for discharge, but that's to be expected
+
+# NOW, to change the date formatting..
 
 is.Date(Full.parameters$Date)
 # FALSE
@@ -95,31 +122,28 @@ is.Date(Full.parameters$Month_day)
 # PUlling out "YEAR" as a factor for graphics separation.
 
 Full.parameters$YEAR <- format(as.Date(Full.parameters$Date), "%Y")
-Full.parameters$YEAR<-as.factor(Full.parameters$YEAR)
+Full.parameters$YEAR <- as.factor(Full.parameters$YEAR)
 is.factor(Full.parameters$YEAR)
 # CHECK.
 
-Full.parameters$Discharge_mean
-# looks numeric...
-class(Full.parameters$Discharge_mean)
-# yep..integer, great--theoretically no transformation here
+summary(Full.parameters)
+
 
 subset<-Full.parameters[c(1,2,3,4,8,11,14,15,16)]
 # pulling a subset of data that may be of interest, and trying that..
 
 summary(subset)
-# subset$BLH_passed<-as.numeric(subset$BLH_passed, na.omit=TRUE)
-# subset$AMS_passed<-as.numeric(subset$AMS_passed, na.omit=TRUE)
-# FOR SOME REASON, passage numbers were reading as characters...
-
-# Great, all look numeric (NOW)
+# Great: BLH, AMS, and Discharge all look numeric (NOW) AND...
+# Dates are reading appropriately
 
 ## NOW, from the DFP table, it looks like 2009-2011 were really decent passage years
 ## for herring and shad. I'll filter for just these years, then try to depict them
 ## as the "stacked years" graphic.
 
 # Creating some datasets for different graphic purposes:
-# Decent for multi-year graphic, individual years for DO, TEMP, Discharge plotted               
+# Decent for multi-year graphic, individual years for DO, TEMP, Discharge plotted  
+
+library(dplyr)
 
 Decent<-filter(subset,subset$Date >= "2009-02-09" & subset$Date <= "2011-04-29")
 
@@ -213,7 +237,6 @@ Eight <- ggplot(eight, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -231,7 +254,7 @@ Eight <- ggplot(eight, aes(x=Month_day)) +
   theme(legend.text = element_text(size=10, family = "serif")) +
   theme(legend.position = "top", legend.key.width=unit(1.5,"cm")) +
   guides(col=guide_legend(nrow=1))
-theme(legend.text=element_text(size=10, family = "serif")) +
+  theme(legend.text=element_text(size=10, family = "serif")) +
   theme(axis.ticks=element_blank())
 
 eight.pass.w.discharge <- Eight + theme(axis.title.x = element_text(family = "serif", size=14, vjust = 0)) +
@@ -239,12 +262,17 @@ eight.pass.w.discharge <- Eight + theme(axis.title.x = element_text(family = "se
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2008",
+           family="serif", size=6)
 
 
 G8 <- eight.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black")) 
 
 G8
 
@@ -258,7 +286,6 @@ Nine <- ggplot(o.nine, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -284,20 +311,38 @@ Nine.pass.w.discharge <- Nine + theme(axis.title.x = element_text(family = "seri
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2009",
+           family="serif", size=6)
 
 
 G9 <- Nine.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  # no points!: geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
+  
 
+# FULL bars
+G9.recent <- G9 + 
+  geom_rect(data=o.nine,aes(xmin=(as.Date("02/20", "%m/%d")), xmax=(as.Date("02/23", "%m/%d")),
+                            fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=o.nine,aes(xmin=(as.Date("03/10", "%m/%d")), xmax=(as.Date("03/11", "%m/%d")),
+                            fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
 
-G9.new <- G9 + geom_vline(xintercept=(as.Date("02/20","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("02/23","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("03/10","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("03/11","%m/%d")), color="red", linetype="dotdash") 
+G9.recent
 
-G9.new
+# dot-dash lines:
+# G9.new <- G9 + geom_vline(xintercept=(as.Date("02/20","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("02/23","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("03/10","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("03/11","%m/%d")), color="red", linetype="dotdash") 
+
+# G9.new
 
 
 ### 2010 ### 
@@ -306,7 +351,6 @@ Ten <- ggplot(ten, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -332,12 +376,17 @@ Ten.pass.w.discharge <- Ten + theme(axis.title.x = element_text(family = "serif"
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2010",
+           family="serif", size=6)
 
 
 G10 <- Ten.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G10
 
@@ -351,7 +400,6 @@ Eleven <- ggplot(eleven, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -377,17 +425,27 @@ Eleven.pass.w.discharge <- Eleven + theme(axis.title.x = element_text(family = "
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2011",
+           family="serif", size=6)
 
 
-G11 <- Eleven.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+G11 <- Eleven.pass.w.discharge +
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
+  
+  
+G11.new <- G11 + 
+  geom_rect(data=eleven,aes(xmin=(as.Date("02/19", "%m/%d")), xmax=(as.Date("02/21", "%m/%d")),
+                            fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) 
 
-G11
 
-G11.new <- G11 + geom_vline(xintercept=(as.Date("02/19","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("02/21","%m/%d")), color="red", linetype="dotdash")
+# G11.new <- G11 + geom_vline(xintercept=(as.Date("02/19","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("02/21","%m/%d")), color="red", linetype="dotdash")
 
 G11.new
 
@@ -434,7 +492,6 @@ Twelve <- ggplot(twelve, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -454,27 +511,30 @@ Twelve <- ggplot(twelve, aes(x=Month_day)) +
   guides(col=guide_legend(nrow=1))
   theme(legend.text=element_text(size=10, family = "serif")) +
   theme(axis.ticks=element_blank())
+  
 
-  twelve.pass.w.discharge <- Twelve + theme(axis.title.x = element_text(family = "serif", size=14, vjust = 0)) +
+twelve.pass.w.discharge <- Twelve + theme(axis.title.x = element_text(family = "serif", size=14, vjust = 0)) +
   theme(axis.title.y= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
-
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2012",
+           family="serif", size=6) 
 
 G12 <- twelve.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G12
 
-G12.new <- G12 + geom_vline(xintercept=(as.Date("03/15","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/01","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/06","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/25","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("05/15","%m/%d")), color="red", linetype="dotdash") 
-
+G12.new <- G12 + 
+  geom_rect(data=twelve,aes(xmin=(as.Date("04/05", "%m/%d")), xmax=(as.Date("04/25", "%m/%d")),
+                            fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) 
 G12.new
 
 
@@ -485,7 +545,6 @@ Thirteen <- ggplot(thirteen, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -511,22 +570,44 @@ thirteen.pass.w.discharge <- Thirteen + theme(axis.title.x = element_text(family
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("03/03", "%m/%d"),y=22000, label="2013",
+           family="serif", size=6) 
 
 
 G13 <- thirteen.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G13
 
-G13.new <- G13 + geom_vline(xintercept=(as.Date("02/08","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("02/27","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("03/07","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/01","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/27","%m/%d")), color="red", linetype="dotdash") 
+G13.new <- G13 + 
+  geom_rect(data=thirteen,aes(xmin=(as.Date("02/08", "%m/%d")), 
+                              xmax=(as.Date("02/27", "%m/%d")),
+                              fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=thirteen,aes(xmin=(as.Date("03/07", "%m/%d")), 
+                              xmax=(as.Date("04/01", "%m/%d")),
+                              fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=thirteen,aes(xmin=(as.Date("04/27", "%m/%d")), 
+                              xmax=(as.Date("05/15", "%m/%d")),
+                              fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
 
-G13.new
+  
+G13.new  
+  
+  
+#  geom_vline(xintercept=(as.Date("02/08","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("02/27","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("03/07","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("04/01","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("04/27","%m/%d")), color="red", linetype="dotdash") 
+
 
 
 ### 2014 ###
@@ -535,7 +616,6 @@ Fourteen <- ggplot(fourteen, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -561,18 +641,25 @@ fourteen.pass.w.discharge <- Fourteen + theme(axis.title.x = element_text(family
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("03/29", "%m/%d"),y=24000, label="2014",
+           family="serif", size=6) 
 
 
 G14 <- fourteen.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G14
 
-G14.new <- G14 + geom_vline(xintercept=(as.Date("02/08","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("03/24","%m/%d")), color="red", linetype="dotdash")
-
+G14.new <- G14 + 
+  geom_rect(data=fourteen,aes(xmin=(as.Date("02/01", "%m/%d")), 
+                              xmax=(as.Date("03/24", "%m/%d")),
+                              fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
 G14.new
 
 
@@ -582,7 +669,6 @@ Fifteen <- ggplot(fifteen, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -602,24 +688,41 @@ Fifteen <- ggplot(fifteen, aes(x=Month_day)) +
   guides(col=guide_legend(nrow=1))
   theme(legend.text=element_text(size=10, family = "serif")) +
   theme(axis.ticks=element_blank())
+  
 
 fifteen.pass.w.discharge <- Fifteen + theme(axis.title.x = element_text(family = "serif", size=14, vjust = 0)) +
   theme(axis.title.y= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2015",
+             family="serif", size=6)  
 
 
 G15 <- fifteen.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
-
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
+  
+  
 G15
 
-G15.new <- G15 + geom_vline(xintercept=(as.Date("03/14","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("03/16","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/29","%m/%d")), color="red", linetype="dotdash")
+G15.new <- G15 + 
+  geom_rect(data=fifteen,aes(xmin=(as.Date("03/14", "%m/%d")), 
+                              xmax=(as.Date("03/16", "%m/%d")),
+                              fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=fifteen,aes(xmin=(as.Date("04/29", "%m/%d")), 
+                              xmax=(as.Date("05/15", "%m/%d")),
+                              fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
+  
+#  geom_vline(xintercept=(as.Date("03/14","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("03/16","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("04/29","%m/%d")), color="red", linetype="dotdash")
 
 G15.new
 
@@ -630,7 +733,6 @@ Sixteen <- ggplot(sixteen, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -656,28 +758,48 @@ sixteen.pass.w.discharge <- Sixteen + theme(axis.title.x = element_text(family =
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2016",
+           family="serif", size=6)
 
 
 G16 <- sixteen.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G16
 
-# Adding in vertical lines to show those periods of inoperation...
-
-G16.new <- G16 + geom_vline(xintercept=(as.Date("03/01","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("03/02","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("03/11","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/06","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/16","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/17","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("05/01","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("05/08","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("05/14","%m/%d")), color="red", linetype="dotdash") 
+G16.new <- G16 +
+  geom_rect(data=sixteen,aes(xmin=(as.Date("03/01", "%m/%d")), 
+                             xmax=(as.Date("03/02", "%m/%d")),
+                             fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=sixteen,aes(xmin=(as.Date("03/11", "%m/%d")), 
+                              xmax=(as.Date("04/06", "%m/%d")),
+                              fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=sixteen,aes(xmin=(as.Date("04/16", "%m/%d")), 
+                             xmax=(as.Date("04/17", "%m/%d")),
+                             fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
 
 G16.new
+
+# Adding in vertical lines to show those periods of inoperation...
+
+# G16.new <- G16 + geom_vline(xintercept=(as.Date("03/01","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("03/02","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("03/11","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("04/06","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("04/16","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("04/17","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("05/01","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("05/08","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("05/14","%m/%d")), color="red", linetype="dotdash") 
+
 
 ### 2017 ###
 
@@ -685,7 +807,6 @@ Seventeen <- ggplot(seventeen, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -711,21 +832,37 @@ seventeen.pass.w.discharge <- Seventeen + theme(axis.title.x = element_text(fami
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2017",
+           family="serif", size=6)
 
 
 G17 <- seventeen.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G17
 
 # Adding in vertical lines to show those periods of inoperation...
 
-G17.new <- G17 + geom_vline(xintercept=(as.Date("02/18","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("02/20","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("02/23","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("02/28","%m/%d")), color="red", linetype="dotdash") 
+G17.new <- G17 + 
+  geom_rect(data=seventeen,aes(xmin=(as.Date("02/18", "%m/%d")), 
+                             xmax=(as.Date("02/20", "%m/%d")),
+                             fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=seventeen,aes(xmin=(as.Date("02/23", "%m/%d")), 
+                             xmax=(as.Date("02/28", "%m/%d")),
+                             fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
+  
+  
+#  geom_vline(xintercept=(as.Date("02/18","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("02/20","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("02/23","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("02/28","%m/%d")), color="red", linetype="dotdash") 
 
 G17.new
 
@@ -735,7 +872,6 @@ Eighteen <- ggplot(eighteen, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -761,21 +897,33 @@ eighteen.pass.w.discharge <- Eighteen + theme(axis.title.x = element_text(family
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2018",
+           family="serif", size=6)
 
 
 G18 <- eighteen.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G18
 
 # Adding in vertical lines to show those periods of inoperation...
 
-G18.new <- G18 + geom_vline(xintercept=(as.Date("03/19","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/08","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("05/06","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("05/15","%m/%d")), color="red", linetype="dotdash")
+G18.new <- G18 + 
+  geom_rect(data=eighteen,aes(xmin=(as.Date("03/19", "%m/%d")), 
+                               xmax=(as.Date("04/08", "%m/%d")),
+                               fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
+  
+  
+#  geom_vline(xintercept=(as.Date("03/19","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("04/08","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("05/06","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("05/15","%m/%d")), color="red", linetype="dotdash")
 
 G18.new
 
@@ -785,7 +933,6 @@ Nineteen <- ggplot(nineteen, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -811,19 +958,30 @@ nineteen.pass.w.discharge <- Nineteen + theme(axis.title.x = element_text(family
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/10", "%m/%d"),y=22000, label="2019",
+           family="serif", size=6)
 
 
 G19 <- nineteen.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G19
 
 # Adding in vertical lines to show those periods of inoperation...
 
-G19.new <- G19 + geom_vline(xintercept=(as.Date("03/30","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/13","%m/%d")), color="red", linetype="dotdash") 
+G19.new <- G19 + 
+  geom_rect(data=nineteen,aes(xmin=(as.Date("03/30", "%m/%d")), 
+                              xmax=(as.Date("04/13", "%m/%d")),
+                              fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
+  
+#  geom_vline(xintercept=(as.Date("03/30","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("04/13","%m/%d")), color="red", linetype="dotdash") 
 
 G19.new
 
@@ -834,7 +992,6 @@ Twenty <- ggplot(twenty, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -842,7 +999,7 @@ Twenty <- ggplot(twenty, aes(x=Month_day)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
                                          breaks=seq(0,100000,20000),label=comma),
-                     breaks = seq(0,25000,5000), label=comma, expand=c(0.01,0.01), limits=c(0,27000)) +
+                     breaks = seq(0,25000,5000), label=comma, expand=c(0.01,0.01), limits=c(0,25000)) +
   
   theme(panel.grid.major=element_blank()) +
   theme(panel.grid.minor=element_blank()) +
@@ -860,21 +1017,37 @@ twenty.pass.w.discharge <- Twenty + theme(axis.title.x = element_text(family = "
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("03/01", "%m/%d"),y=24000, label="2020",
+           family="serif", size=6)
+
 
 
 G20 <- twenty.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G20
 
 # Adding in vertical lines to show those periods of inoperation...
 
-G20.new <- G20 + geom_vline(xintercept=(as.Date("02/10","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("02/21","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("03/20","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("03/24","%m/%d")), color="red", linetype="dotdash") 
+G20.new <- G20 + 
+  geom_rect(data=twenty,aes(xmin=(as.Date("02/10", "%m/%d")), 
+                              xmax=(as.Date("02/21", "%m/%d")),
+                              fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=twenty,aes(xmin=(as.Date("03/20", "%m/%d")), 
+                            xmax=(as.Date("03/24", "%m/%d")),
+                            fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
+    
+#  geom_vline(xintercept=(as.Date("02/10","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("02/21","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("03/20","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("03/24","%m/%d")), color="red", linetype="dotdash") 
 
 G20.new
 
@@ -884,7 +1057,6 @@ Twentyone <- ggplot(twentyone, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -892,7 +1064,7 @@ Twentyone <- ggplot(twentyone, aes(x=Month_day)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
                                          breaks=seq(0,100000,20000),label=comma),
-                     breaks = seq(0,25000,5000), label=comma, expand=c(0.01,0.01), limits=c(0,27000)) +
+                     breaks = seq(0,25000,5000), label=comma, expand=c(0.01,0.01), limits=c(0,25000)) +
   
   theme(panel.grid.major=element_blank()) +
   theme(panel.grid.minor=element_blank()) +
@@ -910,20 +1082,32 @@ twentyone.pass.w.discharge <- Twentyone + theme(axis.title.x = element_text(fami
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2021",
+           family="serif", size=6)
+  
 
 
 G21 <- twentyone.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G21
 
 # Adding in vertical lines to show those periods of inoperation...
 
-G21.new <- G21 + geom_vline(xintercept=(as.Date("03/30","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("04/29","%m/%d")), color="red", linetype="dotdash") +
-  geom_vline(xintercept=(as.Date("05/15","%m/%d")), color="red", linetype="dotdash") 
+G21.new <- G21 + 
+  geom_rect(data=twentyone,aes(xmin=(as.Date("03/30", "%m/%d")), 
+                            xmax=(as.Date("04/29", "%m/%d")),
+                            fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
+  
+#  geom_vline(xintercept=(as.Date("03/30","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("04/29","%m/%d")), color="red", linetype="dotdash") +
+#  geom_vline(xintercept=(as.Date("05/15","%m/%d")), color="red", linetype="dotdash") 
 
 G21.new
 
@@ -934,7 +1118,6 @@ Twentytwo <- ggplot(twentytwo, aes(x=Month_day)) +
   geom_line(aes(y=BLH_passed * 1 / 4 , color="Herring count"), size=1.25) +
   geom_line(aes(y=AMS_passed * 1 / 4 , color="Shad count"), size=1.25) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
-  scale_color_viridis(discrete=TRUE, option="E", alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
                limits=as.Date(c('2022-02-01','2022-05-01')), 
@@ -960,12 +1143,17 @@ twentytwo.pass.w.discharge <- Twentytwo + theme(axis.title.x = element_text(fami
   theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
   theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
   theme(axis.text.y= element_text(family = "serif", color="black")) +
-  theme(axis.title.x= element_blank())
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/07", "%m/%d"),y=22000, label="2022",
+           family="serif", size=6)
 
 
 G22 <- twentytwo.pass.w.discharge + 
-  geom_point(aes(y=Water.temp_mean * 1000, color="Temperature"), shape="diamond",size=2,alpha=1) +
-  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature")) 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
 
 G22
 
@@ -975,7 +1163,7 @@ G22
 # drought year that didn't allow for many operational days..
 
 G8
-G9.new
+G9.recent
 G10
 G11.new
 
@@ -1004,23 +1192,50 @@ library('Cairo')
 # trying to figure out the pdf output of cairo
 # ggsave(G18.new, filename = '2018.pdf', dpi = 300, type = 'pdf',
 #       width = 8.5, height = 11, units = 'in')
-# 2018
-ggsave(G18.new, filename = '2018.png', dpi = 300, type = 'cairo',
+
+
+ggsave(G8, filename = '2008.png', dpi = 300, type = 'cairo',
        width = 8, height = 7, units = 'in')
 
-ggsave(G15.new, filename = '2015.png', dpi = 300, type = 'cairo',
+ggsave(G9.recent, filename = '2009.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
+
+ggsave(G10, filename = '2010.png', dpi = 300, type = 'cairo',
        width = 8, height = 7, units = 'in')
 
 ggsave(G11.new, filename = '2011.png', dpi = 300, type = 'cairo',
        width = 8, height = 7, units = 'in')
 
-ggsave(G8, filename = '2008.png', dpi = 300, type = 'cairo',
+ggsave(G12.new, filename = '2012.png', dpi = 300, type = 'cairo',
        width = 8, height = 7, units = 'in')
 
 ggsave(G13.new, filename = '2013.png', dpi = 300, type = 'cairo',
        width = 8, height = 7, units = 'in')
 
-ggsave(G22, filename = '2022.png', dpi = 300, type = 'cairo',
+ggsave(G14.new, filename = '2014.png', dpi = 300, type = 'cairo',
        width = 8, height = 7, units = 'in')
 
+ggsave(G15.new, filename = '2015.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
+
+ggsave(G16.new, filename = '2016.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
+
+ggsave(G17.new, filename = '2017.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
+
+ggsave(G18.new, filename = '2018.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
+
+ggsave(G19.new, filename = '2019.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
+
+ggsave(G20.new, filename = '2020.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
+
+ggsave(G21.new, filename = '2021.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
+
+ggsave(G22, filename = '2022.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
 
