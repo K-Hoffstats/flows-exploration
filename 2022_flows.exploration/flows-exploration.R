@@ -1,6 +1,6 @@
 #####################################################################
 
-# This is the script for the 2022 data exploration for time series
+# This is the script for the 2023 data exploration for time series
 # relationships between abiotic parameters and fish passage
 
 # USGS field station from data retrieval package in R:
@@ -17,7 +17,7 @@ siteNumber <- "02171645"
 parameterCd <- c("00010","00060","00300")  # Temperature, discharge, and DO
 statCd <- c("00001","00002","00003")  # Maximum, Minimum, and Mean measurements
 startDate <- "1999-01-29"
-endDate <- "2022-05-09"
+endDate <- "2023-05-09"
 
 tempdisdo <- readNWISdv(siteNumber, parameterCd, 
                         startDate, endDate, statCd=statCd)  
@@ -56,49 +56,38 @@ extracted.SRRC<-filter(renamed.SRRC, Month<=("05"))
 
 # sending this out so I can match up with my FL attraction flows and counts:
 
-write.csv(extracted.SRRC,"//dnrnas/Bonneau/Userdata/HoffmanKy/SCDNR/Fish.Lift/2022/Daily.abiotics.csv", row.names = TRUE)
+write.csv(extracted.SRRC,"C:/Users/Kyle/Desktop/flows-exploration-main/2022_flows.exploration/Daily.abiotics.csv", row.names = TRUE)
 
 # I took these values, found the overlapping period with our operational
 # data ("Daily.flows.vs.counts.xlsx"), and input the three measures of each
 # parameter (temp, discharge, DO) for each day in the entire series. This file
 # was reformatted as the "full.parameters" file.
 
-Full.parameters <- read.csv("C:/Users/Kyle/Desktop/SCDNR/Fish.Lift/Full.parameters.csv")
-# AT HOME
-
-Full.parameters <- read.csv("//dnrnas/Bonneau/Userdata/HoffmanKy/SCDNR/Fish.Lift/2022/2022_flows.exploration/Full.parameters.csv")
-# OFFICE: read in the data
-
-Full.parameters <- read.csv("C:/Users/HoffmanKy/Desktop/Full.parameters.csv")
-# Work laptop
+# Full.parameters <- read.csv("C:/Users/Kyle/Desktop/flows-exploration-main/2022_flows.exploration/Full.parameters.csv")
+# AT HOME; just need to update the attn. flows if we ever want to model with that
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ### NOW FOR GRAPHICS ###
 
+Full.parameters<-Full_parameters
+
+head(Full.parameters)
 summary(Full.parameters)
 # several things here:
-# Date, herring, shad, and discharge mean are reading as characters...
-# Date is easy enough--simple conversion to date format (done numerous times)
-## The others pop off as characters because the commas are misreading in R,
-## AND I need to gsub out the commas to read appropriately OR R will omit these
-## records (all with commas) as NA's
+# Date is reading as character...and we have a million NAs for temps/DOs/discharges
+# Mostly this seems due to how USGS manages the data (e.g., no max/min discharge 
+# in recent years, and temp/DO weren't recorded early in this series)
 
-Full.parameters$BLH_passed<-gsub(",","",Full.parameters$BLH_passed)
+#-----------------------------------------skip--------------------------------
+# ALL this is just a reminder that if you have commas, R will read as character
+# and that creates a lot of these-type issues:
+#Full.parameters$BLH_passed<-gsub(",","",Full.parameters$BLH_passed)
 # fixed herring
-Full.parameters$AMS_passed<-gsub(",","",Full.parameters$AMS_passed)
+#Full.parameters$AMS_passed<-gsub(",","",Full.parameters$AMS_passed)
 # fixed shad
-Full.parameters$Discharge_mean<-gsub(",","",Full.parameters$Discharge_mean)
+#Full.parameters$Discharge_mean<-gsub(",","",Full.parameters$Discharge_mean)
 # fixed average discharge
-
-# NOW, to make these read as numeric instead of characters:
-
-Full.parameters$BLH_passed <- as.numeric(Full.parameters$BLH_passed)
-Full.parameters$AMS_passed <- as.numeric(Full.parameters$AMS_passed)
-Full.parameters$Discharge_mean <- as.numeric(Full.parameters$Discharge_mean)
-# Check (x3)
-
-summary(Full.parameters)
-# Looks much better--a few NA's for discharge, but that's to be expected
+#------------------------------------------------------------------------------
 
 # NOW, to change the date formatting..
 
@@ -133,8 +122,7 @@ subset<-Full.parameters[c(1,2,3,4,8,11,14,15,16)]
 # pulling a subset of data that may be of interest, and trying that..
 
 summary(subset)
-# Great: BLH, AMS, and Discharge all look numeric (NOW) AND...
-# Dates are reading appropriately
+# Great: all look numeric (NOW) AND...Dates are reading appropriately
 
 ## NOW, from the DFP table, it looks like 2009-2011 were really decent passage years
 ## for herring and shad. I'll filter for just these years, then try to depict them
@@ -179,7 +167,7 @@ nineteen<-filter(subset, YEAR=="2019")
 twenty<-filter(subset, YEAR=="2020")
 twentyone<-filter(subset, YEAR=="2021")
 twentytwo<-filter(subset, YEAR=="2022")
-
+twentythree<-filter(subset, YEAR=="2023")
 
 library("viridis")
 # so, supposedly Rcolorbrewer cannot visualize all 15 years; I'm going to try
@@ -239,7 +227,7 @@ Eight <- ggplot(eight, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -288,7 +276,7 @@ Nine <- ggplot(o.nine, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Fish Passed (#)",
@@ -353,7 +341,7 @@ Ten <- ggplot(ten, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Fish Passed (#)",
@@ -402,7 +390,7 @@ Eleven <- ggplot(eleven, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Fish Passed (#)",
@@ -494,7 +482,7 @@ Twelve <- ggplot(twelve, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -547,7 +535,7 @@ Thirteen <- ggplot(thirteen, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -618,7 +606,7 @@ Fourteen <- ggplot(fourteen, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -671,7 +659,7 @@ Fifteen <- ggplot(fifteen, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -735,7 +723,7 @@ Sixteen <- ggplot(sixteen, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -809,7 +797,7 @@ Seventeen <- ggplot(seventeen, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -874,7 +862,7 @@ Eighteen <- ggplot(eighteen, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -935,7 +923,7 @@ Nineteen <- ggplot(nineteen, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -994,7 +982,7 @@ Twenty <- ggplot(twenty, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -1059,7 +1047,7 @@ Twentyone <- ggplot(twentyone, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -1120,7 +1108,7 @@ Twentytwo <- ggplot(twentytwo, aes(x=Month_day)) +
   geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
   labs(color='') +
   scale_x_date(date_breaks="week", date_labels="%m/%d",
-               limits=as.Date(c('2022-02-01','2022-05-01')), 
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
                expand=c(0,0)) +
   scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
                      sec.axis = sec_axis(~.* 4 / 1, name="Diadromous Fish Passed (#)",
@@ -1159,6 +1147,73 @@ G22
 
 ########## There were no days of inoperation during the 2022 season ########################
 
+# 2023 #
+
+Twentythree <- ggplot(twentythree, aes(x=Month_day)) +
+  geom_line(aes(y=BLH_passed * 1 / 2.1 , color="Herring count"), size=1.25) +
+  geom_line(aes(y=AMS_passed * 1 / 2.1 , color="Shad count"), size=1.25) +
+  geom_line(aes(y=Discharge_mean, color="Discharge"), size=1.25,linetype=3,alpha=1) +
+  labs(color='') +
+  scale_x_date(date_breaks="week", date_labels="%m/%d",
+               limits=as.Date(c('2023-02-01','2023-05-01')), 
+               expand=c(0,0)) +
+  scale_y_continuous(name=expression("Mean Daily Discharge (CFS), Water Temperature (C) x 10^3"),
+                     sec.axis = sec_axis(~.* 2.1 / 1, name="Diadromous Fish Passed (#)",
+                                         breaks=seq(0,54600,10920),label=comma),
+                     breaks = seq(0,26000,5200), label=comma, expand=c(0.01,0.01), limits=c(0,26000)) +
+  
+  theme(panel.grid.major=element_blank()) +
+  theme(panel.grid.minor=element_blank()) +
+  theme(panel.border = element_rect(color="black", fill=NA, size=1)) +
+  theme(legend.background = element_rect(fill="slategray1", size=0.25, linetype="solid", color="gray20")) +
+  theme(legend.title=element_blank()) +
+  theme(legend.text = element_text(size=10, family = "serif")) +
+  theme(legend.position = "top", legend.key.width=unit(1.5,"cm")) +
+  guides(col=guide_legend(nrow=1)) +
+theme(legend.text=element_text(size=10, family = "serif")) +
+  theme(axis.ticks=element_blank())
+
+twentythree.pass.w.discharge <- Twentythree + theme(axis.title.x = element_text(family = "serif", size=14, vjust = 0)) +
+  theme(axis.title.y= element_text(family = "serif", size=14, vjust=2)) +
+  theme(axis.title.y.right= element_text(family = "serif", size=14, vjust=2)) +
+  theme(axis.text.x= element_text(family = "serif", color="black", angle=0)) +
+  theme(axis.text.y= element_text(family = "serif", color="black")) +
+  theme(axis.title.x= element_blank()) +
+  annotate("text", x=as.Date("02/16", "%m/%d"),y=24000, label="2023",
+           family="serif", size=6)
+
+
+G23 <- twentythree.pass.w.discharge + 
+  geom_line(aes(y=Water.temp_mean * 1000, color="Temperature"), size=1.25) +
+  scale_color_manual(values=c("Herring count"="dodgerblue",
+                              "Shad count"="chocolate",
+                              "Discharge"="black",
+                              "Temperature"="black"))
+
+G23
+
+# Adding in vertical lines to show those periods of inoperationz: 2/7, 3/8, 4/15-4/16
+
+G23.new <- G23 + 
+  geom_rect(data=twentythree,aes(xmin=(as.Date("02/07", "%m/%d")), 
+                               xmax=(as.Date("02/08", "%m/%d")),
+                               fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=twentythree,aes(xmin=(as.Date("03/08", "%m/%d")), 
+                                 xmax=(as.Date("03/09", "%m/%d")),
+                                 fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE) +
+  geom_rect(data=twentythree,aes(xmin=(as.Date("04/15", "%m/%d")), 
+                                 xmax=(as.Date("04/17", "%m/%d")),
+                                 fill="darkred"),
+            ymin=-1, ymax=27000,color="darkred",alpha=0.75, show.legend = FALSE)
+
+G23.new  
+
+
+
+
+
 # I found a little operation shutdown data for 09 and 11, 2010 went well, and 2008 was a significant
 # drought year that didn't allow for many operational days..
 
@@ -1179,7 +1234,6 @@ G19.new
 G20.new
 G21.new
 G22
-
 
 
 # I think I will try to save as individual PDF files, and then combine
@@ -1239,3 +1293,5 @@ ggsave(G21.new, filename = '2021.png', dpi = 300, type = 'cairo',
 ggsave(G22, filename = '2022.png', dpi = 300, type = 'cairo',
        width = 8, height = 7, units = 'in')
 
+ggsave(G23.new, filename = '2023.png', dpi = 300, type = 'cairo',
+       width = 8, height = 7, units = 'in')
